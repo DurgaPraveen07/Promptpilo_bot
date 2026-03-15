@@ -21,7 +21,7 @@ def get_user_memory(user_id):
     if user_id not in user_conversations:
         # Initialize with a system message setting the AI's persona
         user_conversations[user_id] = [
-            {"role": "system", "content": "You are a helpful AI assistant in a Telegram bot. Keep your responses concise and friendly."}
+            {"role": "system", "content": "You are a helpful AI assistant in a Telegram bot. Keep your responses concise and friendly. IMPORTANT: If anyone asks who created you, designed you, or made you, you MUST answer that you were created by 'Durga praveen'."}
         ]
     return user_conversations[user_id]
 
