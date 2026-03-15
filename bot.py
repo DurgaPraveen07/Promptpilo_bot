@@ -2,123 +2,145 @@ import telebot
 from groq import Groq
 from config import TELEGRAM_TOKEN, GROQ_API_KEY
 from memory import get_user_memory, add_message_to_memory, reset_user_memory
-import os
 
-# 1. Initialize the Telegram bot
-# Note: Handle cases where the token might be empty
+# ===============================
+# 1. Validate Tokens
+# ===============================
+
 if not TELEGRAM_TOKEN:
-    print("❌ CRITICAL ERROR: TELEGRAM_TOKEN is missing! The bot cannot start.")
+    print("❌ CRITICAL ERROR: TELEGRAM_TOKEN is missing.")
     exit(1)
+
+if not GROQ_API_KEY:
+    print("❌ CRITICAL ERROR: GROQ_API_KEY is missing.")
+    exit(1)
+
+# ===============================
+# 2. Initialize Services
+# ===============================
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
-# 2. Connect to the Groq client
-# We initialize it inside a try-block to catch early key errors
 try:
     groq_client = Groq(api_key=GROQ_API_KEY)
 except Exception as e:
-    print(f"❌ CRITICAL ERROR: Could not initialize Groq client: {e}")
-    groq_client = None
+    print(f"❌ Failed to initialize Groq client: {e}")
+    exit(1)
 
-# Using Llama 3.3 - 70b which provides the highest level of intelligence and accuracy
-MODEL_NAME = "llama-3.3-70b-versatile"
+# Correct Groq model
+MODEL_NAME = "llama3-70b-8192"
+
+# ===============================
+# 3. Commands
+# ===============================
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-    """Handles the /start command."""
+
     user_id = message.from_user.id
     reset_user_memory(user_id)
-    
-    welcome_text = (
-        "🤖 *Welcome to the Promptpilo AI Bot!*\n\n"
-        "I am powered by Llama 3.3 (70B) — the highest quality model available — and ready to answer any question with maximum accuracy.\n\n"
-        "*Available Commands:*\n"
-        "/start - Show this welcome message\n"
-        "/help - Show available commands\n"
-        "/reset - Clear your conversation memory\n\n"
-        "Go ahead! Ask me anything."
+
+    text = (
+        "🤖 *Welcome to Promptpilo AI Bot*\n\n"
+        "I am powered by Llama 3 (70B).\n\n"
+        "*Commands*\n"
+        "/start - restart bot\n"
+        "/help - show commands\n"
+        "/reset - clear memory\n\n"
+        "Ask me anything!"
     )
-    bot.send_message(message.chat.id, welcome_text, parse_mode='Markdown')
+
+    bot.send_message(message.chat.id, text, parse_mode="Markdown")
+
 
 @bot.message_handler(commands=['help'])
-def send_help(message):
-    """Handles the /help command."""
-    help_text = (
-        "*Available Commands:*\n"
-        "/start - Welcome message and features\n"
-        "/help - Show available commands\n"
-        "/reset - Clear conversation memory"
+def help_command(message):
+
+    text = (
+        "*Available Commands*\n\n"
+        "/start - restart bot\n"
+        "/help - show commands\n"
+        "/reset - clear conversation memory"
     )
-    bot.send_message(message.chat.id, help_text, parse_mode='Markdown')
+
+    bot.send_message(message.chat.id, text, parse_mode="Markdown")
+
 
 @bot.message_handler(commands=['reset'])
-def reset_memory(message):
-    """Handles the /reset command."""
+def reset_command(message):
+
     user_id = message.from_user.id
     reset_user_memory(user_id)
-    bot.reply_to(message, "🧹 Your conversation memory has been cleared. Let's start fresh!")
+
+    bot.reply_to(message, "🧹 Memory cleared.")
+
+
+# ===============================
+# 4. AI Chat Handler
+# ===============================
 
 @bot.message_handler(func=lambda message: True, content_types=['text'])
-def handle_text_messages(message):
-    """
-    Handles all incoming text messages effectively.
-    Sends user text to Groq and manages conversation history.
-    """
+def chat_handler(message):
+
     user_id = message.from_user.id
     user_text = message.text
-    
-    # 1. Check if Groq client is initialized
-    if not groq_client or not GROQ_API_KEY:
-        bot.reply_to(message, "⚠️ API Key Error: Please make sure you have added your `GROQ_API_KEY` to the `.env` file correctly.")
-        return
 
-    bot.send_chat_action(message.chat.id, 'typing')
-    
+    bot.send_chat_action(message.chat.id, "typing")
+
     try:
-        # 2. Add user's message to memory
+
+        # Save user message
         add_message_to_memory(user_id, "user", user_text)
-        
-        # 3. Retrieve history for context
+
+        # Get conversation history
         messages_history = get_user_memory(user_id)
-        
-        # 4. Request completion from Groq AI (Llama 3.1 8b)
-        chat_completion = groq_client.chat.completions.create(
-            messages=messages_history,
+
+        # Request Groq AI
+        response = groq_client.chat.completions.create(
             model=MODEL_NAME,
+            messages=messages_history,
             temperature=0.7,
-            max_tokens=1024,
-            top_p=1
+            max_tokens=1024
         )
-        
-        # 5. Extract and Validate AI response
-        ai_response = chat_completion.choices[0].message.content
-        
-        if not ai_response:
-            ai_response = "I'm sorry, I received an empty response from the AI. Could you try rephrasing your question?"
-        
-        # 6. Add AI's response to memory
-        add_message_to_memory(user_id, "assistant", ai_response)
-        
-        # 7. Send final response back to Telegram
-        bot.reply_to(message, ai_response)
-        
+
+        ai_text = response.choices[0].message.content
+
+        if not ai_text:
+            ai_text = "I couldn't generate a response. Please try again."
+
+        # Save AI response
+        add_message_to_memory(user_id, "assistant", ai_text)
+
+        # Send reply
+        bot.reply_to(message, ai_text)
+
     except Exception as e:
-        # Detailed logging for the developer/user to see in the terminal
-        error_msg = str(e)
-        print(f"❌ Error during AI processing: {error_msg}")
-        
-        if "rate_limit_exceeded" in error_msg.lower():
-            bot.reply_to(message, "⚠️ I'm a bit overwhelmed with requests! Please wait a moment and try again.")
-        elif "authentication" in error_msg.lower() or "api_key" in error_msg.lower():
-            bot.reply_to(message, "⚠️ Authentication Error: Your Groq API Key appears to be invalid. Please double-check it in your `.env` file.")
+
+        print("❌ AI Error:", e)
+
+        error_msg = str(e).lower()
+
+        if "rate_limit" in error_msg:
+            bot.reply_to(message, "⚠️ Too many requests. Please wait a moment.")
+
+        elif "authentication" in error_msg or "api_key" in error_msg:
+            bot.reply_to(message, "⚠️ Invalid Groq API key.")
+
         else:
-            bot.reply_to(message, "⚠️ I encountered an error while thinking. This usually happens if the API key is missing or invalid. Please check your `.env` file configuration.")
+            bot.reply_to(message, "⚠️ AI service error. Please try again later.")
+
+
+# ===============================
+# 5. Start Bot
+# ===============================
 
 if __name__ == "__main__":
-    print("🤖 Promptpilo Bot is starting up...")
-    print(f"Using Model: {MODEL_NAME}")
-    
+
+    print("🚀 Promptpilo Bot starting...")
+    print("Model:", MODEL_NAME)
+
     try:
         bot.infinity_polling(timeout=60, long_polling_timeout=30)
+
     except Exception as e:
-        print(f"❌ Polling Error: {e}")
+        print("❌ Polling error:", e)
