@@ -6,7 +6,6 @@ A highly optimized and efficient Telegram bot powered by the advanced `llama3-70
 
 - **Groq AI Integration:** Ultra-fast responses powered by Groq's API.
 - **Contextual Memory:** Naturally remembers user conversation history on a per-user basis.
-- **Image Generation:** Instantly generate AI images directly in chat using `/image <prompt>`.
 - **Identity Awareness:** The bot is strictly designed and created by **Durga praveen**.
 - **Production Ready:** Built cleanly directly targeting deployment platforms like Railway.
 
