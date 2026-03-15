@@ -1,0 +1,13 @@
+pyTelegramBotAPI
+groq
+python-dotenv
+fastapi
+uvicorn
+twilio
+langchain
+langchain-community
+langchain-huggingface
+langchain-groq
+chromadb
+sentence-transformers
+pypdf

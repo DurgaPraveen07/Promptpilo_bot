@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Business Assistant</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: #f4f7f6; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        #chat-container { width: 400px; height: 600px; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
+        #chat-header { background: #007bff; color: white; padding: 15px; text-align: center; font-size: 1.2rem; font-weight: bold; }
+        #chat-window { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background: #fafafa; }
+        .message { max-width: 80%; padding: 10px 15px; border-radius: 20px; font-size: 0.95rem; line-height: 1.4; }
+        .user-message { background: #007bff; color: white; align-self: flex-end; border-bottom-right-radius: 5px; }
+        .bot-message { background: #e9ecef; color: #333; align-self: flex-start; border-bottom-left-radius: 5px; }
+        #input-container { display: flex; padding: 15px; background: white; border-top: 1px solid #eee; }
+        #user-input { flex: 1; padding: 10px 15px; border: 1px solid #ddd; border-radius: 20px; outline: none; transition: border 0.3s; }
+        #user-input:focus { border-color: #007bff; }
+        #send-btn { background: #007bff; color: white; border: none; padding: 10px 20px; margin-left: 10px; border-radius: 20px; cursor: pointer; transition: background 0.3s; }
+        #send-btn:hover { background: #0056b3; }
+        .typing { display: none; align-self: flex-start; color: #aaa; font-style: italic; font-size: 0.85rem; padding: 0 15px; }
+    </style>
+</head>
+<body>
+
+    <div id="chat-container">
+        <div id="chat-header">Support Assistant</div>
+        <div id="chat-window">
+            <div class="message bot-message">Hello! I am the automated business assistant. How can I help you today?</div>
+            <div class="typing bot-message" id="typing-indicator">Assistant is typing...</div>
+        </div>
+        <div id="input-container">
+            <input type="text" id="user-input" placeholder="Type your message..." autocomplete="off">
+            <button id="send-btn">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const chatWindow = document.getElementById('chat-window');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const typingIndicator = document.getElementById('typing-indicator');
+
+        function appendMessage(text, isUser) {
+            const div = document.createElement('div');
+            div.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            // Basic formatting for new lines
+            div.innerHTML = text.replace(/\n/g, '<br>');
+            chatWindow.insertBefore(div, typingIndicator);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            appendMessage(text, true);
+            userInput.value = '';
+            
+            typingIndicator.style.display = 'block';
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+
+            try {
+                // Ensure we hit the correct backend port, relative URL works if served from same origin
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text, user_id: 'web_visitor_123' })
+                });
+                
+                if (!response.ok) throw new Error('API Error');
+                
+                const data = await response.json();
+                typingIndicator.style.display = 'none';
+                appendMessage(data.response, false);
+            } catch (error) {
+                console.error(error);
+                typingIndicator.style.display = 'none';
+                appendMessage("Sorry, I am having trouble connecting to the server.", false);
+            }
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+</body>
+</html>
