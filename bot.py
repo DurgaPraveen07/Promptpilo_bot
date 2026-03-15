@@ -2,16 +2,26 @@ import telebot
 from groq import Groq
 from config import TELEGRAM_TOKEN, GROQ_API_KEY
 from memory import get_user_memory, add_message_to_memory, reset_user_memory
-import urllib.parse
+import os
 
 # 1. Initialize the Telegram bot
+# Note: Handle cases where the token might be empty
+if not TELEGRAM_TOKEN:
+    print("❌ CRITICAL ERROR: TELEGRAM_TOKEN is missing! The bot cannot start.")
+    exit(1)
+
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
 # 2. Connect to the Groq client
-groq_client = Groq(api_key=GROQ_API_KEY)
+# We initialize it inside a try-block to catch early key errors
+try:
+    groq_client = Groq(api_key=GROQ_API_KEY)
+except Exception as e:
+    print(f"❌ CRITICAL ERROR: Could not initialize Groq client: {e}")
+    groq_client = None
 
-# Define the Groq model
-MODEL_NAME = "llama3-70b-8192"
+# Using Llama 3.1 - 8b which is extremely fast and reliable for free/basic tiers
+MODEL_NAME = "llama-3.1-8b-instant"
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
@@ -21,12 +31,12 @@ def send_welcome(message):
     
     welcome_text = (
         "🤖 *Welcome to the Promptpilo AI Bot!*\n\n"
-        "I am connected to an advanced AI model and ready to help you.\n\n"
+        "I am powered by Llama 3.1 and ready to answer any question you have.\n\n"
         "*Available Commands:*\n"
         "/start - Show this welcome message\n"
         "/help - Show available commands\n"
         "/reset - Clear your conversation memory\n\n"
-        "How can I assist you today?"
+        "Go ahead! Ask me anything."
     )
     bot.send_message(message.chat.id, welcome_text, parse_mode='Markdown')
 
@@ -51,45 +61,64 @@ def reset_memory(message):
 @bot.message_handler(func=lambda message: True, content_types=['text'])
 def handle_text_messages(message):
     """
-    Handles all incoming text messages.
-    Sends the user message to the Groq API with conversation context.
+    Handles all incoming text messages effectively.
+    Sends user text to Groq and manages conversation history.
     """
     user_id = message.from_user.id
     user_text = message.text
     
+    # 1. Check if Groq client is initialized
+    if not groq_client or not GROQ_API_KEY:
+        bot.reply_to(message, "⚠️ API Key Error: Please make sure you have added your `GROQ_API_KEY` to the `.env` file correctly.")
+        return
+
     bot.send_chat_action(message.chat.id, 'typing')
     
     try:
-        # 1. Add user's message to memory
+        # 2. Add user's message to memory
         add_message_to_memory(user_id, "user", user_text)
         
-        # 2. Retrieve history for context
+        # 3. Retrieve history for context
         messages_history = get_user_memory(user_id)
         
-        # 3. Request completion from Groq AI
+        # 4. Request completion from Groq AI (Llama 3.1 8b)
         chat_completion = groq_client.chat.completions.create(
             messages=messages_history,
             model=MODEL_NAME,
             temperature=0.7,
-            max_tokens=1024
+            max_tokens=1024,
+            top_p=1
         )
         
-        # 4. Extract AI response
+        # 5. Extract and Validate AI response
         ai_response = chat_completion.choices[0].message.content
         
-        # 5. Add AI's response to memory
+        if not ai_response:
+            ai_response = "I'm sorry, I received an empty response from the AI. Could you try rephrasing your question?"
+        
+        # 6. Add AI's response to memory
         add_message_to_memory(user_id, "assistant", ai_response)
         
-        # 6. Send response
+        # 7. Send final response back to Telegram
         bot.reply_to(message, ai_response)
         
     except Exception as e:
-        print(f"Error communicating with Groq or Telegram: {e}")
-        bot.reply_to(message, "⚠️ Sorry, I encountered an error while processing your request. Please try again later.")
+        # Detailed logging for the developer/user to see in the terminal
+        error_msg = str(e)
+        print(f"❌ Error during AI processing: {error_msg}")
+        
+        if "rate_limit_exceeded" in error_msg.lower():
+            bot.reply_to(message, "⚠️ I'm a bit overwhelmed with requests! Please wait a moment and try again.")
+        elif "authentication" in error_msg.lower() or "api_key" in error_msg.lower():
+            bot.reply_to(message, "⚠️ Authentication Error: Your Groq API Key appears to be invalid. Please double-check it in your `.env` file.")
+        else:
+            bot.reply_to(message, "⚠️ I encountered an error while thinking. This usually happens if the API key is missing or invalid. Please check your `.env` file configuration.")
 
-# Railway Nixpack builders just need a script that runs infinitely.
-# Since this is purely a Telegram bot using polling, it does not need a web port.
-# Make sure your Railway deployment settings have NO PORT and NO TCP Healthchecks enforced.
 if __name__ == "__main__":
-    print("🤖 Telegram Bot is starting up...")
-    bot.infinity_polling()
+    print("🤖 Promptpilo Bot is starting up...")
+    print(f"Using Model: {MODEL_NAME}")
+    
+    try:
+        bot.infinity_polling(timeout=60, long_polling_timeout=30)
+    except Exception as e:
+        print(f"❌ Polling Error: {e}")

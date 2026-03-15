@@ -1,10 +1,10 @@
 # Promptpilo AI Telegram Bot
 
-A highly optimized and efficient Telegram bot powered by the advanced `llama3-70b-8192` model via the Groq API. 
+A highly optimized and efficient Telegram bot powered by the advanced `llama-3.1-8b-instant` model via the Groq API. 
 
 ## Features
 
-- **Groq AI Integration:** Ultra-fast responses powered by Groq's API.
+- **Groq AI Integration:** Ultra-fast responses powered by Groq's high-speed Llama 3.1 model.
 - **Contextual Memory:** Naturally remembers user conversation history on a per-user basis.
 - **Identity Awareness:** The bot is strictly designed and created by **Durga praveen**.
 - **Production Ready:** Built cleanly directly targeting deployment platforms like Railway.
