@@ -20,8 +20,8 @@ except Exception as e:
     print(f"❌ CRITICAL ERROR: Could not initialize Groq client: {e}")
     groq_client = None
 
-# Using Llama 3.1 - 8b which is extremely fast and reliable for free/basic tiers
-MODEL_NAME = "llama-3.1-8b-instant"
+# Using Llama 3.3 - 70b which provides the highest level of intelligence and accuracy
+MODEL_NAME = "llama-3.3-70b-versatile"
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
@@ -31,7 +31,7 @@ def send_welcome(message):
     
     welcome_text = (
         "🤖 *Welcome to the Promptpilo AI Bot!*\n\n"
-        "I am powered by Llama 3.1 and ready to answer any question you have.\n\n"
+        "I am powered by Llama 3.3 (70B) — the highest quality model available — and ready to answer any question with maximum accuracy.\n\n"
         "*Available Commands:*\n"
         "/start - Show this welcome message\n"
         "/help - Show available commands\n"
