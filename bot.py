@@ -115,18 +115,17 @@ def chat_handler(message):
         bot.reply_to(message, ai_text)
 
     except Exception as e:
+      print("FULL ERROR:", e)
+      bot.reply_to(message, f"Error: {str(e)}")
+    
+    
+    if "rate_limit" in error_msg:
+        bot.reply_to(message, "⚠️ Too many requests. Please wait a moment.")
 
-        print("❌ AI Error:", e)
+    elif "authentication" in error_msg or "api_key" in error_msg:
+         bot.reply_to(message, "⚠️ Invalid Groq API key.")
 
-        error_msg = str(e).lower()
-
-        if "rate_limit" in error_msg:
-            bot.reply_to(message, "⚠️ Too many requests. Please wait a moment.")
-
-        elif "authentication" in error_msg or "api_key" in error_msg:
-            bot.reply_to(message, "⚠️ Invalid Groq API key.")
-
-        else:
+    else:
             bot.reply_to(message, "⚠️ AI service error. Please try again later.")
 
 
