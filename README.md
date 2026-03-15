@@ -1,116 +1,69 @@
-# Omnichannel AI Business Assistant
+# Promptpilo AI Telegram Bot
 
-A complete Python platform powered by the Groq API (Llama 3). This project act as a unified AI assistant supporting:
-1. **Telegram Bot**
-2. **Website Chatbot** (FastAPI Backend + HTML/JS Widget)
-3. **WhatsApp Bot** (via Twilio Webhook)
-4. **RAG Knowledge Base** (Retrieval-Augmented Generation context using ChromaDB)
+A highly optimized and efficient Telegram bot powered by the advanced `llama3-70b-8192` model via the Groq API. 
 
 ## Features
 
-- **Groq API Integration:** Lightning-fast AI responses using Groq.
-- **RAG Capability:** Ingest your business PDFs and text files so the AI knows everything about your business.
-- **Unified FastAPI Backend:** Serves the website widget and Twilio webhook endpoints simultaneously.
-- **Business Automation Hooks:** Intercepts emails and contact requests and saves them locally.
-- **24/7 Deployment Setup:** Dockerized and ready for VPS deployment.
+- **Groq AI Integration:** Ultra-fast responses powered by Groq's API.
+- **Contextual Memory:** Naturally remembers user conversation history on a per-user basis.
+- **Image Generation:** Instantly generate AI images directly in chat using `/image <prompt>`.
+- **Identity Awareness:** The bot is strictly designed and created by **Durga praveen**.
+- **Production Ready:** Built cleanly directly targeting deployment platforms like Railway.
 
-## Project Structure
+## 📂 Project Structure
 
 ```
-ai-telegram-bot/
-├── app.py             # Main FastAPI entry point (runs Telegram bot in background)
-├── bot.py             # Telegram specific handling logic
-├── rag.py             # LangChain + ChromaDB RAG implementation
-├── config.py          # Environment configuration
-├── memory.py          # In-memory dictionary for conversation history
-├── data/              # Put your business knowledge documents (txt/pdf) here
-├── static/            # Frontend resources (index.html web widget)
-├── requirements.txt   # Dependencies
-├── Dockerfile         # Docker container definition
-├── docker-compose.yml # Easy deployment orchestrator
-└── .env.example       # Example environment variables
+Promptpilo_bot/
+│
+├── bot.py             # Main bot initialization and message handlers
+├── requirements.txt   # Python package dependencies
+├── config.py          # Environment variables and config logic
+├── memory.py          # In-memory dictionary for conversational context
+└── README.md          # Project documentation
 ```
 
-## Setup Instructions
+## 🚀 Setup Instructions
 
 ### 1. Install dependencies
 
+Create an environment and install the required packages:
 ```bash
-python -m venv venv
-# Windows:
-venv\Scripts\activate
-# Linux/Mac:
-source venv/bin/activate
-
 pip install -r requirements.txt
 ```
 
-### 2. Configure Environment
+### 2. Configure API Keys
 
-Copy `.env.example` to `.env`:
+1. **Telegram Token:** Create a bot on Telegram via [@BotFather](https://t.me/botfather).
+2. **Groq API Key:** Get a free, lightning-fast API key at the [Groq Console](https://console.groq.com/keys).
+
+**Local Development:**
+Copy `.env.example` to `.env` and paste your keys inside it:
 ```bash
 cp .env.example .env
 ```
-Add your keys:
-- `TELEGRAM_TOKEN` from [@BotFather](https://t.me/botfather)
-- `GROQ_API_KEY` from [Groq Console](https://console.groq.com/keys)
 
-### 3. Add Business Knowledge (For RAG)
-
-Drop any text files (`.txt`), CSVs, or PDFs into the `/data` folder. These will form the knowledge base the AI uses to answer questions.
-
-### 4. Run the Bot Locally
+### 3. Run the bot
 
 ```bash
-python app.py
+python bot.py
 ```
-This single command will:
-- Process the knowledge base into ChromaDB.
-- Start the Telegram Bot.
-- Start the Website Widget at `http://localhost:8000/`.
-- Open webhook ports for WhatsApp at `http://localhost:8000/api/whatsapp`.
+The terminal will display `🤖 Telegram Bot is starting up...` and you can start chatting with it!
 
 ---
 
-## Setting up WhatsApp (Twilio)
+## ☁️ Deployment (Railway / Heroku / Render)
 
-1. Create a Twilio account and activate the WhatsApp Sandbox.
-2. Run Ngrok locally to expose your server:
+Since this bot uses `bot.infinity_polling()`, it does **not** need to bind to a web port. It acts purely as a worker.
+
+**Railway Deployment Steps:**
+1. Connect your GitHub repository to Railway.
+2. Railway will automatically detect `requirements.txt` and build a Python Nixpack environment.
+3. **IMPORTANT:** Go to your Railway Service Settings → Environments → Variables.
+4. Add `TELEGRAM_TOKEN` and `GROQ_API_KEY` with your actual keys.
+5. Provide a Start Command (if it doesn't auto-detect):
    ```bash
-   ngrok http 8000
+   python bot.py
    ```
-3. Copy your Ngrok URL (e.g., `https://xxxx.ngrok-free.app/api/whatsapp`) and paste it into your Twilio Sandbox settings under **"When a message comes in"**.
+6. **Disable Healthchecks:** Because this bot runs via Telegram Polling instead of Webhooks, it does not open a port. If Railway fails your deployment on "Healthchecks", ensure you do not have any exposed ports or TCP checks enabled in your Railway settings. 
 
----
-
-## 24/7 Deployment Guide (Run your bot forever)
-
-If you close your computer, the bot stops. To make it run 24/7, you need to deploy it using **Docker** on a cloud server (VPS like DigitalOcean, Hetzner, AWS, etc.).
-
-### Deploying via Docker (Recommended)
-
-Assuming you have cloned this repository on a VPS that has Docker installed:
-
-1. Create and configure your `.env` file on the server.
-2. Put any knowledge base files into the `data/` directory.
-3. Run the container in the background:
-   ```bash
-   docker-compose up -d --build
-   ```
-
-The bot is now running 24/7. It will automatically restart if the server reboots or if the application crashes.
-
-### Deploying via PM2 (Non-Docker Alternative)
-
-If you prefer not to use Docker, you can use PM2 to keep it alive:
-```bash
-# Install Node and PM2
-npm install -g pm2
-
-# Start the app
-pm2 start app.py --name "ai-assistant" --interpreter python3
-
-# Make it start on boot
-pm2 startup
-pm2 save
-```
+The bot will stay alive 24/7!
